@@ -1,6 +1,6 @@
 {
-  "name": "ETB TAP",
-  "description": "The ultimate tap-to-earn experience on the TON ecosystem. Tap to mine ETB, join the community, and prepare for the airdrop.",
+  "name": "Task Tuner Stats",
+  "description": "Minimalist stats for Task Tuner with referral tracking.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
