@@ -15,13 +15,22 @@ service cloud.firestore {
     function isValidUser(data) {
       return data.keys().hasAll(['username', 'adsWatched', 'updatedAt', 'telegramId', 'balance'])
         && data.username is string && data.username.size() <= 100
-        && data.adsWatched is int && data.adsWatched >= 0
-        && data.balance is number && data.balance >= 0
-        && (data.get('consumedInvites', 0) is int)
+        && data.adsWatched is number
+        && data.balance is number
+        && (data.get('consumedInvites', 0) is number)
         && (data.get('has_withdrawn', false) is bool)
-        && (data.get('adsSinceLastWithdrawal', 0) is int)
+        && (data.get('adsSinceLastWithdrawal', 0) is number)
+        && (data.get('referralPaid', false) is bool)
         && data.updatedAt == request.time
-        && data.telegramId is int;
+        && data.telegramId is number;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['message', 'type', 'createdAt', 'read'])
+        && data.message is string && data.message.size() <= 500
+        && (data.type == 'info' || data.type == 'success' || data.type == 'error')
+        && data.createdAt == request.time
+        && data.read == false;
     }
 
     function isValidWithdrawal(data) {
@@ -34,13 +43,19 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isSignedIn(); 
-      allow list: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.telegramId is number; // More secure list
       
       allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
       
-      allow update: if (isOwner(userId) && isValidId(userId) && isValidUser(incoming()))
+      allow update: if (isOwner(userId) && isValidId(userId))
+        && (
+          // Action 1: Owner full sync
+          isValidUser(incoming()) ||
+          // Action 2: Owner partial update (ads, daily, tasks, etc)
+          incoming().diff(existing()).affectedKeys().hasAny(['consumedInvites', 'updatedAt', 'has_withdrawn', 'adsSinceLastWithdrawal', 'balance', 'dailyStreak', 'lastDailyClaim', 'tasksCompleted', 'adsWatched', 'referralPaid'])
+        )
         || (
-          // Action: Referral Reward (50 points)
+          // Action 3: Referral Reward (Triggered by joining user)
           isSignedIn() && !isOwner(userId)
           && incoming().balance == existing().balance + 50
           && (incoming().referralsCount == (existing().get('referralsCount', 0) + 1))
@@ -48,16 +63,17 @@ service cloud.firestore {
           && (incoming().referralEarnings == (existing().get('referralEarnings', 0.0) + 50))
           && incoming().updatedAt == request.time
           && incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'referralsCount', 'total_invites', 'referralEarnings', 'updatedAt'])
-        )
-        || (
-          // Action: Status Flip / Invite Consumption / Ad Reset
-          isOwner(userId)
-          && incoming().diff(existing()).affectedKeys().hasAny(['consumedInvites', 'updatedAt', 'has_withdrawn', 'adsSinceLastWithdrawal', 'balance', 'dailyStreak', 'lastDailyClaim', 'tasksCompleted', 'adsWatched'])
         );
 
       match /referrals/{refId} {
         allow read: if isOwner(userId);
         allow create: if isSignedIn() && isValidId(refId);
+      }
+
+      match /notifications/{notifId} {
+        allow read: if isOwner(userId);
+        allow create: if isSignedIn(); // Allow inviter/system to create notifications
+        allow update: if isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
       }
 
       match /withdrawals/{withdrawalId} {

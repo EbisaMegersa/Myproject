@@ -17,6 +17,7 @@
         "consumedInvites": { "type": "integer" },
         "referralEarnings": { "type": "number" },
         "invitedBy": { "type": "string" },
+        "referralPaid": { "type": "boolean" },
         "has_withdrawn": { "type": "boolean" },
         "adsSinceLastWithdrawal": { "type": "integer" },
         "updatedAt": { "type": "string", "format": "date-time" }
@@ -33,6 +34,18 @@
         "joinedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["telegramId", "username", "joinedAt"]
+    },
+    "Notification": {
+      "title": "User Notification",
+      "description": "Alerts for user actions like referral rewards",
+      "type": "object",
+      "properties": {
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "error"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["message", "type", "createdAt", "read"]
     },
     "Withdrawal": {
       "title": "Withdrawal Request",
@@ -58,6 +71,10 @@
     "/users/{userId}/referrals/{refId}": {
       "schema": "Referral",
       "description": "Tracks referrals for a specific user"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User specific alerts"
     },
     "/users/{userId}/withdrawals/{withdrawalId}": {
       "schema": "Withdrawal",
