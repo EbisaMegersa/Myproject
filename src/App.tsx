@@ -64,6 +64,26 @@ interface WithdrawalHistory {
 }
 
 // --- Utilities ---
+const tg = (window as any).Telegram?.WebApp;
+
+const safeAlert = (message: string) => {
+  if (tg && tg.isVersionAtLeast('6.2')) {
+    tg.showAlert(message);
+  } else {
+    alert(message);
+  }
+};
+
+const safeHaptic = (type: 'success' | 'warning' | 'error' | 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => {
+  if (tg && tg.isVersionAtLeast('6.1')) {
+    if (['success', 'warning', 'error'].includes(type)) {
+      tg.HapticFeedback?.notificationOccurred(type as any);
+    } else {
+      tg.HapticFeedback?.impactOccurred(type as any);
+    }
+  }
+};
+
 const retryOperation = async <T,>(operation: () => Promise<T>, maxRetries = 3): Promise<T> => {
   let lastError: any;
   for (let i = 0; i < maxRetries; i++) {
@@ -269,10 +289,8 @@ export default function App() {
                       await batch.commit();
                     });
                     
-                    if (tg) {
-                      tg.showAlert(`Welcome to Task Tuner!! 🚀`);
-                      tg.HapticFeedback?.notificationOccurred('success');
-                    }
+                    safeAlert(`Welcome to Task Tuner!! 🚀`);
+                    safeHaptic('success');
                   }
                 } catch (refErr) {
                   console.error("Instant Referral Error (after retries):", refErr);
@@ -287,8 +305,8 @@ export default function App() {
                     });
                   } catch {}
                 }
-              } else if (tg) {
-                tg.showAlert(`Welcome to Task Tuner!! 🚀`);
+              } else {
+                safeAlert(`Welcome to Task Tuner!! 🚀`);
               }
               
               const initialProfile = {
@@ -352,14 +370,13 @@ export default function App() {
               const notif = change.doc.data() as UserNotification;
               const tg = (window as any).Telegram?.WebApp;
               if (tg) {
-                // native fallback
-                // tg.showAlert(`Notification: ${notif.message}`); 
+                // native fallback removed as it was causing issues on old clients
                 
                 // My custom toast
                 setShowToast({ message: notif.message, type: notif.type });
                 setTimeout(() => setShowToast(null), 5000);
 
-                tg.HapticFeedback?.notificationOccurred(notif.type === 'error' ? 'error' : 'success');
+                safeHaptic(notif.type === 'error' ? 'error' : 'success');
                 
                 // Mark as read immediately after showing
                 updateDoc(doc(db, `${userDocPath}/notifications/${change.doc.id}`), { read: true });
@@ -401,9 +418,7 @@ export default function App() {
           updatedAt: serverTimestamp()
         });
         
-        try {
-          (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
-        } catch {}
+        safeHaptic('success');
       } catch (error) {
         handleFirestoreError(error, OperationType.UPDATE, userDocPath);
       } finally {
@@ -465,11 +480,9 @@ export default function App() {
         updatedAt: serverTimestamp()
       });
 
-      try {
-        (window as any).Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
-      } catch {}
+      safeHaptic('medium');
 
-      alert(`Day ${newStreak} Claimed! Reward: ${reward} points`);
+      safeAlert(`Day ${newStreak} Claimed! Reward: ${reward} points`);
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, userDocPath);
     } finally {
@@ -504,10 +517,8 @@ export default function App() {
 
       await batch.commit();
 
-      try {
-        (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
-      } catch {}
-      alert(`Successfully verified! ${points} points added to your balance.`);
+      safeHaptic('success');
+      safeAlert(`Successfully verified! ${points} points added to your balance.`);
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, userDocPath);
     } finally {
@@ -519,12 +530,8 @@ export default function App() {
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(referralLink);
-    try {
-      (window as any).Telegram?.WebApp?.showAlert('Referral link copied to clipboard!');
-      (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
-    } catch {
-      alert('Copied!');
-    }
+    safeAlert('Referral link copied to clipboard!');
+    safeHaptic('success');
   };
 
   const handleShare = () => {
@@ -612,10 +619,8 @@ export default function App() {
 
       setWithdrawalSuccess(true);
       
-      try {
-        (window as any).Telegram?.WebApp?.showAlert('🎉 Withdrawal Request Submitted!');
-        (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
-      } catch {}
+      safeAlert('🎉 Withdrawal Request Submitted!');
+      safeHaptic('success');
       
       setWithdrawalAmount('');
       setWithdrawalAddress('');
@@ -634,10 +639,8 @@ export default function App() {
           });
           await successBatch.commit();
           
-          try {
-             (window as any).Telegram?.WebApp?.showAlert('✅ Withdrawal Processed Successfully!');
-             (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
-          } catch {}
+          safeAlert('✅ Withdrawal Processed Successfully!');
+          safeHaptic('success');
         } catch (err) {
           console.error("Delayed Withdrawal Update Error:", err);
         }
@@ -648,10 +651,8 @@ export default function App() {
     } catch (err) {
       console.error("Withdrawal Error:", err);
       handleFirestoreError(err, OperationType.WRITE, userDocRef.path);
-      try {
-        (window as any).Telegram?.WebApp?.showAlert('❌ Withdrawal failed. Please try again.');
-        (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
-      } catch {}
+      safeAlert('❌ Withdrawal failed. Please try again.');
+      safeHaptic('error');
     } finally {
       setIsWithdrawing(false);
     }
