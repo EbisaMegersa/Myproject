@@ -3,11 +3,85 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ETB TAP</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Jaallatamaa Rewards</title>
+    <script>
+      (function() {
+        var highVersion = '10.0';
+        var mockStorage = {
+          setItem: function(k, v, cb) { if(cb) cb(null, true); return this; },
+          getItem: function(k, cb) { if(cb) cb(null, null); return this; },
+          getItems: function(ks, cb) { if(cb) cb(null, {}); return this; },
+          removeItem: function(k, cb) { if(cb) cb(null, true); return this; },
+          removeItems: function(ks, cb) { if(cb) cb(null, true); return this; },
+          getKeys: function(cb) { if(cb) cb(null, []); return this; }
+        };
+
+        // Suppress specific Telegram SDK warnings
+        var _log = console.log;
+        var _warn = console.warn;
+        var _error = console.error;
+        var filter = function(args, original) {
+          try {
+            var msg = Array.prototype.join.call(args, ' ');
+            if (msg.includes('CloudStorage is not supported') || msg.includes('version 6.0')) {
+              return;
+            }
+          } catch(e) {}
+          original.apply(console, args);
+        };
+        console.log = function() { filter(arguments, _log); };
+        console.warn = function() { filter(arguments, _warn); };
+        console.error = function() { filter(arguments, _error); };
+
+        var webAppPatch = {
+          version: highVersion,
+          isVersionAtLeast: function() { return true; },
+          CloudStorage: mockStorage,
+          initDataUnsafe: { version: highVersion }
+        };
+
+        function patchWebApp() {
+          if (!window.Telegram) {
+            window.Telegram = {};
+          }
+          
+          var currentWebApp = window.Telegram.WebApp || {};
+          
+          // Merge patch onto current object
+          for (var key in webAppPatch) {
+            try {
+              Object.defineProperty(currentWebApp, key, {
+                get: (function(k) { 
+                  return function() { return webAppPatch[k]; }; 
+                })(key),
+                set: function() {},
+                configurable: true
+              });
+            } catch(e) {
+              currentWebApp[key] = webAppPatch[key];
+            }
+          }
+
+          // Protect the WebApp property on Telegram object
+          try {
+            Object.defineProperty(window.Telegram, 'WebApp', {
+              get: function() { return currentWebApp; },
+              set: function() {},
+              configurable: true
+            });
+          } catch(e) {
+            window.Telegram.WebApp = currentWebApp;
+          }
+        }
+
+        patchWebApp();
+        // Continuously ensure the patch sticks
+        var patchInterval = setInterval(patchWebApp, 10);
+        setTimeout(function() { clearInterval(patchInterval); }, 5000);
+      })();
+    </script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src='https://libtl.com/sdk.js' data-zone='10937696' data-sdk='show_10937696'></script>
   </head>
   <body>
     <div id="root"></div>
