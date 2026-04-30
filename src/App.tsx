@@ -237,7 +237,7 @@ export default function App() {
                       joinedAt: serverTimestamp()
                     });
                     
-                    tg.showAlert(`Welcome to @Madbottherbot! You were successfully referred and can now start earning.`);
+                    tg.showAlert(`Welcome to @Tasktuner_bot! You were successfully referred and can now start earning.`);
                     tg.HapticFeedback?.notificationOccurred('success');
                   }
                 } catch (refErr) {
@@ -426,7 +426,7 @@ export default function App() {
     }
   };
 
-  const referralLink = profile ? `https://t.me/Madbottherbot?startapp=${profile.telegramId}` : '';
+  const referralLink = profile ? `https://t.me/Tasktuner_bot?startapp=${profile.telegramId}` : '';
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -564,7 +564,7 @@ export default function App() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0D121F] p-10 text-center">
         <Loader2 className="w-12 h-12 animate-spin text-[#EF4444] mb-6" />
-        <h2 className="text-xl font-black text-white mb-2">Loading @Madbot...</h2>
+        <h2 className="text-xl font-black text-white mb-2">Loading @Tasktuner_bot...</h2>
         <p className="text-sm text-[#A0AEC0]">Securing connection to rewards gateway</p>
       </div>
     );
