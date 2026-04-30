@@ -222,7 +222,7 @@ export default function App() {
                       joinedAt: serverTimestamp()
                     });
                     
-                    tg.showAlert(`Welcome to @Madbottherbot! You were successfully referred and can now start earning.`);
+                    tg.showAlert(`Welcome to @Tasktuner_bot! You were successfully referred and can now start earning.`);
                     tg.HapticFeedback?.notificationOccurred('success');
                   }
                 } catch (refErr) {
@@ -414,7 +414,7 @@ export default function App() {
     }
   };
 
-  const referralLink = profile ? `https://t.me/Madbottherbot?startapp=${profile.telegramId}` : '';
+  const referralLink = profile ? `https://t.me/Tasktuner_bot?startapp=${profile.telegramId}` : '';
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -427,7 +427,7 @@ export default function App() {
   };
 
   const handleShare = () => {
-    const text = encodeURIComponent("Join this bot and earn rewards! \ud83d\ude80");
+    const text = encodeURIComponent("Join @Tasktuner_bot and earn 50 points ($0.35) per referral! 🚀");
     const url = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${text}`;
     (window as any).Telegram?.WebApp?.openTelegramLink(url);
   };
@@ -560,7 +560,7 @@ export default function App() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0D121F] p-10 text-center">
         <Loader2 className="w-12 h-12 animate-spin text-[#06B6D4] mb-6" />
-        <h2 className="text-xl font-black text-white mb-2">Loading @Madbot...</h2>
+        <h2 className="text-xl font-black text-white mb-2">Loading @Tasktuner...</h2>
         <p className="text-sm text-[#A0AEC0]">Securing connection to rewards gateway</p>
       </div>
     );
@@ -1106,7 +1106,7 @@ export default function App() {
                   </div>
                   <h2 className="text-3xl font-black mb-2 tracking-tight">Invite & Earn</h2>
                   <p className="text-sm opacity-80 max-w-[240px] leading-relaxed mx-auto">
-                    Earn <span className="text-white font-bold">50 points</span> for every friend who starts earning with us
+                    Earn <span className="text-white font-bold">50 points ($0.35)</span> for every friend who starts earning with us
                   </p>
                   
                   <div className="grid grid-cols-2 gap-4 w-full mt-10">
@@ -1132,7 +1132,7 @@ export default function App() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <label className="text-[10px] font-black text-[#A0AEC0] uppercase tracking-[0.15em]">Your Unique Link</label>
-                  <span className="text-[10px] text-[#06B6D4] font-bold">Earn 50 points per friend!</span>
+                  <span className="text-[10px] text-[#06B6D4] font-bold">Earn 50 points ($0.35) per friend!</span>
                 </div>
                 <div className="relative group">
                   <input 
@@ -1170,7 +1170,7 @@ export default function App() {
                    <div>
                      <h5 className="font-bold text-sm mb-1 text-white">Verified Tracking</h5>
                      <p className="text-xs text-[#A0AEC0] leading-relaxed">
-                       Our system verifies every referral instantly using deep-link technology. You get paid 50 points the moment they open the app.
+                       Our system verifies every referral instantly using deep-link technology. You get paid 50 points ($0.35) the moment they open the app.
                      </p>
                    </div>
                 </div>
