@@ -661,8 +661,11 @@ export default function App() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0D121F] p-10 text-center">
-        <Loader2 className="w-12 h-12 animate-spin text-[#FACC15] mb-6" />
-        <h2 className="text-xl font-black text-white mb-2">Loading @Tasktuner...</h2>
+        <div className="relative">
+          <Loader2 className="w-12 h-12 animate-spin text-[#FFB800] mb-6" />
+          <div className="absolute inset-0 blur-xl bg-[#FFB800]/20 animate-pulse" />
+        </div>
+        <h2 className="text-xl font-black text-white mb-2 tracking-tight">Loading @Tasktuner...</h2>
         <p className="text-sm text-[#A0AEC0]">Securing connection to rewards gateway</p>
       </div>
     );
@@ -671,8 +674,8 @@ export default function App() {
   if (error === "AUTH_RESTRICTED") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0D0D0D] p-8 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#EAB308]/10 flex items-center justify-center mb-6">
-          <Zap className="w-10 h-10 text-[#EAB308]" />
+        <div className="w-20 h-20 rounded-full bg-[#FFB800]/10 flex items-center justify-center mb-6 shadow-2xl shadow-[#FFB800]/5">
+          <Zap className="w-10 h-10 text-[#FFB800]" />
         </div>
         <h2 className="text-2xl font-black text-white mb-4">Auth Disabled</h2>
         <div className="text-[#A0AEC0] text-sm mb-10 leading-relaxed text-left space-y-4">
@@ -697,11 +700,11 @@ export default function App() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0D121F] p-8 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#FACC15]/10 flex items-center justify-center mb-6">
-          <Bell className="w-10 h-10 text-[#FACC15]" />
+        <div className="w-20 h-20 rounded-full bg-[#FFB800]/10 flex items-center justify-center mb-6">
+          <Bell className="w-10 h-10 text-[#FFB800]" />
         </div>
         <h2 className="text-2xl font-black text-white mb-4">Connection Failed</h2>
-        <p className="text-[#FACC15] text-sm mb-10 leading-relaxed bg-[#FACC15]/5 p-4 rounded-xl border border-[#FACC15]/10">
+        <p className="text-[#FFB800] text-sm mb-10 leading-relaxed bg-[#FFB800]/5 p-4 rounded-xl border border-[#FFB800]/10">
           {error}
         </p>
         <button 
@@ -715,7 +718,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen pb-28 bg-[#0D121F] font-sans selection:bg-[#FACC15]/30 overflow-x-hidden">
+    <div className="min-h-screen pb-28 bg-[#0D121F] font-sans selection:bg-[#FFB800]/30 overflow-x-hidden">
       {/* Header Section */}
       <header className="px-6 pt-6 pb-4 flex items-center justify-between">
         <div>
@@ -726,7 +729,7 @@ export default function App() {
             {activeTab === 'home' ? "Let's earn some points today!" : activeTab === 'tasks' ? "Complete tasks to earn more" : activeTab === 'wallet' ? "Cash out your earnings" : "Refer friends to get paid"}
           </p>
         </div>
-        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#FACC15] to-[#F59E0B] flex items-center justify-center border border-white/10 shadow-lg shadow-[#FACC15]/10 p-0.5">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#FFB800] to-[#D97706] flex items-center justify-center border border-white/10 shadow-lg shadow-[#FFB800]/10 p-0.5">
           <div className="w-full h-full rounded-full bg-[#0D121F] flex items-center justify-center">
              <UserIcon className="w-5 h-5 text-white" />
           </div>
@@ -740,7 +743,7 @@ export default function App() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="gradient-card rounded-[24px] p-6 text-white shadow-xl shadow-[#FACC15]/10"
+              className="gradient-card rounded-[24px] p-6 text-white shadow-xl shadow-[#FFB800]/10"
             >
               <div className="relative z-10">
                 <p className="text-sm font-medium opacity-80 uppercase tracking-widest">Current Balance</p>
@@ -767,10 +770,11 @@ export default function App() {
 
             {/* Action Button */}
             <motion.button 
+              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleWatchAd}
               disabled={isWatching}
-              className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#FACC15] to-[#EAB308] flex items-center justify-center gap-3 text-white font-bold shadow-lg shadow-[#FACC15]/20 disabled:opacity-70 disabled:cursor-not-allowed group transition-all"
+              className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#FFB800] to-[#D97706] flex items-center justify-center gap-3 text-[#0D0D0D] font-bold shadow-lg shadow-[#FFB800]/20 disabled:opacity-70 disabled:cursor-not-allowed group transition-all"
             >
               {isWatching ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -782,14 +786,14 @@ export default function App() {
 
             {/* Daily Rewards Sneak Peek */}
             <section className="stats-card rounded-2xl p-4 flex items-center gap-4 cursor-pointer" onClick={() => setActiveTab('tasks')}>
-              <div className="w-12 h-12 rounded-xl bg-[#FACC15]/10 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-[#FACC15]" />
+              <div className="w-12 h-12 rounded-xl bg-[#FFB800]/10 flex items-center justify-center">
+                <Zap className="w-6 h-6 text-[#FFB800]" />
               </div>
               <div className="flex-1">
                 <h4 className="font-bold text-sm">Daily Reward</h4>
                 <p className="text-xs text-[#A0AEC0]">Current Streak: {profile?.dailyStreak || 0} Days</p>
               </div>
-              <div className="px-3 py-1 rounded-full bg-[#FACC15]/10 text-[#FACC15] text-[10px] font-bold border border-[#FACC15]/20 uppercase">
+              <div className="px-3 py-1 rounded-full bg-[#FFB800]/10 text-[#FFB800] text-[10px] font-bold border border-[#FFB800]/20 uppercase">
                  View Tasks
               </div>
             </section>
@@ -804,10 +808,10 @@ export default function App() {
                     <p className="text-xs text-[#A0AEC0]">Claim your daily reward</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-bold text-[#FACC15]">{profile?.dailyStreak}/7 Days</p>
+                    <p className="text-xs font-bold text-[#FFB800]">{profile?.dailyStreak}/7 Days</p>
                     <div className="w-20 h-1.5 bg-white/10 rounded-full mt-1 overflow-hidden">
                        <div 
-                        className="h-full bg-[#FACC15]" 
+                        className="h-full bg-[#FFB800]" 
                         style={{ width: `${((profile?.dailyStreak || 0) / 7) * 100}%` }}
                        />
                     </div>
@@ -823,13 +827,13 @@ export default function App() {
                    return (
                      <div key={day} className="flex flex-col items-center gap-2">
                         <div className={`w-full aspect-square rounded-xl flex items-center justify-center text-[10px] font-bold border transition-all
-                          ${isCompleted ? 'bg-[#FACC15] border-[#FACC15] text-white' : 
-                            isCurrent ? 'bg-white/5 border-[#FACC15] text-[#FACC15] shadow-[0_0_10px_rgba(250,204,21,0.2)]' : 
+                          ${isCompleted ? 'bg-[#FFB800] border-[#FFB800] text-white' : 
+                            isCurrent ? 'bg-white/5 border-[#FFB800] text-[#FFB800] shadow-[0_0_10px_rgba(255,184,0,0.2)]' : 
                             'bg-white/5 border-white/10 text-[#A0AEC0]'}`}
                         >
                           {isCompleted ? <Check className="w-4 h-4" /> : `Day ${day}`}
                         </div>
-                        <span className={`text-[8px] font-bold ${isCurrent ? 'text-[#FACC15]' : 'text-[#A0AEC0]'}`}>
+                        <span className={`text-[8px] font-bold ${isCurrent ? 'text-[#FFB800]' : 'text-[#A0AEC0]'}`}>
                           {DAILY_REWARDS[i]} pts
                         </span>
                      </div>
@@ -872,7 +876,7 @@ export default function App() {
                         href="https://t.me/ebisa_emoji" 
                         target="_blank" 
                         rel="noreferrer"
-                        className="px-4 py-1.5 rounded-lg bg-[#FACC15]/20 text-[#FACC15] text-[10px] font-bold border border-[#FACC15]/20 text-center flex items-center gap-1"
+                        className="px-4 py-1.5 rounded-lg bg-[#FFB800]/20 text-[#FFB800] text-[10px] font-bold border border-[#FFB800]/20 text-center flex items-center gap-1"
                       >
                          Join <ExternalLink size={10} />
                       </a>
@@ -912,7 +916,7 @@ export default function App() {
                         href="https://t.me/yeman1th" 
                         target="_blank" 
                         rel="noreferrer"
-                        className="px-4 py-1.5 rounded-lg bg-[#FACC15]/20 text-[#FACC15] text-[10px] font-bold border border-[#FACC15]/20 text-center flex items-center gap-1"
+                        className="px-4 py-1.5 rounded-lg bg-[#FFB800]/20 text-[#FFB800] text-[10px] font-bold border border-[#FFB800]/20 text-center flex items-center gap-1"
                       >
                          Join <ExternalLink size={10} />
                       </a>
@@ -948,7 +952,7 @@ export default function App() {
                     <p className="text-[10px] opacity-40 uppercase font-medium">For next withdrawal</p>
                   </div>
                 </div>
-                <span className={`text-xs font-black ${((profile?.total_invites || 0) - (profile?.consumedInvites || 0)) >= 2 ? 'text-green-400' : 'text-[#FACC15]'}`}>
+                <span className={`text-xs font-black ${((profile?.total_invites || 0) - (profile?.consumedInvites || 0)) >= 2 ? 'text-green-400' : 'text-[#FFB800]'}`}>
                   {Math.max(0, (profile?.total_invites || 0) - (profile?.consumedInvites || 0))}/2
                 </span>
               </div>
@@ -963,7 +967,7 @@ export default function App() {
                     <p className="text-[9px] opacity-40 uppercase font-medium">{profile?.has_withdrawn ? 'Needed for next: 10' : 'Required: 25'}</p>
                   </div>
                 </div>
-                <span className={`text-xs font-black ${(profile?.adsSinceLastWithdrawal || 0) >= (profile?.has_withdrawn ? 10 : 25) ? 'text-green-400' : 'text-[#EAB308]'}`}>
+                <span className={`text-xs font-black ${(profile?.adsSinceLastWithdrawal || 0) >= (profile?.has_withdrawn ? 10 : 25) ? 'text-green-400' : 'text-[#D97706]'}`}>
                   {profile?.adsSinceLastWithdrawal || 0}/{profile?.has_withdrawn ? 10 : 25}
                 </span>
               </div>
@@ -987,7 +991,7 @@ export default function App() {
                 {withdrawalMethod && (
                   <div className="flex items-center gap-2">
                     <span className="text-[8px] font-bold text-white/40 uppercase">Selected:</span>
-                    <span className="text-[8px] font-black text-[#FACC15] uppercase">{withdrawalMethod.replace('_', ' ')}</span>
+                    <span className="text-[8px] font-black text-[#FFB800] uppercase">{withdrawalMethod.replace('_', ' ')}</span>
                   </div>
                 )}
               </div>
@@ -1001,7 +1005,7 @@ export default function App() {
                   <button 
                     key={m.id}
                     onClick={() => setWithdrawalMethod(m.id)}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${withdrawalMethod === m.id ? 'bg-[#FACC15]/10 border-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'bg-white/5 border-white/5'}`}
+                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${withdrawalMethod === m.id ? 'bg-[#FFB800]/10 border-[#FFB800] shadow-[0_0_15px_rgba(255,184,0,0.2)]' : 'bg-white/5 border-white/5'}`}
                   >
                     <img src={m.img} alt={m.label} className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
                     <span className="text-[8px] font-black uppercase text-center leading-tight whitespace-pre-wrap">{m.label}</span>
@@ -1020,7 +1024,7 @@ export default function App() {
                     value={withdrawalAmount}
                     onChange={(e) => setWithdrawalAmount(e.target.value)}
                     placeholder="E.g. 100"
-                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-5 text-sm text-white focus:outline-none focus:border-[#FACC15]/50 transition-all"
+                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-5 text-sm text-white focus:outline-none focus:border-[#FFB800]/50 transition-all"
                   />
                   <div className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#A0AEC0]">PTS</div>
                 </div>
@@ -1258,13 +1262,13 @@ export default function App() {
                     </div>
                     <div className="bg-black/30 backdrop-blur-md rounded-2xl p-5 border border-white/5 shadow-inner">
                       <p className="text-[10px] uppercase font-black opacity-40 tracking-[0.2em]">Earnings</p>
-                      <p className="text-3xl font-black mt-2 text-[#FACC15] leading-none">{Math.floor(profile?.referralEarnings || 0)} pts</p>
+                      <p className="text-3xl font-black mt-2 text-[#FFB800] leading-none">{Math.floor(profile?.referralEarnings || 0)} pts</p>
                     </div>
                   </div>
                </div>
 
                {/* Modern Decorative Blurs */}
-               <div className="absolute -right-16 -top-16 w-48 h-48 bg-[#FACC15]/30 rounded-full blur-[60px]" />
+               <div className="absolute -right-16 -top-16 w-48 h-48 bg-[#FFB800]/30 rounded-full blur-[60px]" />
                <div className="absolute -left-16 -bottom-16 w-48 h-48 bg-[#10B981]/30 rounded-full blur-[60px]" />
             </motion.div>
 
@@ -1274,7 +1278,7 @@ export default function App() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <label className="text-[10px] font-black text-[#A0AEC0] uppercase tracking-[0.15em]">Your Unique Link</label>
-                  <span className="text-[10px] text-[#FACC15] font-bold">Earn 50 points per friend!</span>
+                  <span className="text-[10px] text-[#FFB800] font-bold">Earn 50 points per friend!</span>
                 </div>
                 <div className="relative group">
                   <input 
@@ -1306,8 +1310,8 @@ export default function App() {
               {/* Trust/Tutorial Cards */}
               <div className="grid grid-cols-1 gap-4 text-left">
                 <div className="stats-card rounded-[24px] p-6 border border-white/5 flex gap-4 items-start">
-                   <div className="w-10 h-10 rounded-full bg-[#FACC15]/10 flex items-center justify-center shrink-0">
-                     <CheckCircle2 size={20} className="text-[#FACC15]" />
+                   <div className="w-10 h-10 rounded-full bg-[#FFB800]/10 flex items-center justify-center shrink-0">
+                     <CheckCircle2 size={20} className="text-[#FFB800]" />
                    </div>
                    <div>
                      <h5 className="font-bold text-sm mb-1 text-white">Verified Tracking</h5>
@@ -1330,8 +1334,8 @@ export default function App() {
           exit={{ opacity: 0, scale: 0.9 }}
           className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] p-6 rounded-3xl shadow-2xl border flex flex-col items-center text-center max-w-[80%] min-w-[280px]
             ${showToast.type === 'success' ? 'bg-[#10B981] border-[#34D399] text-white' : 
-              showToast.type === 'error' ? 'bg-[#EAB308] border-[#FACC15] text-white' : 
-              'bg-[#FACC15] border-[#FEF08A] text-[#0D0D0D]'}`}
+              showToast.type === 'error' ? 'bg-[#D97706] border-[#FFB800] text-white' : 
+              'bg-[#FFB800] border-[#FEF08A] text-[#0D0D0D]'}`}
         >
           <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-4">
             {showToast.type === 'success' ? <Check size={32} /> : showToast.type === 'error' ? <Zap size={32} /> : <Bell size={32} />}
