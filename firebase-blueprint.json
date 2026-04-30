@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with points-based balance and referral tracking",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "telegramId": { "type": "integer" },
+        "adsWatched": { "type": "integer" },
+        "balance": { "type": "number", "description": "Points balance" },
+        "dailyStreak": { "type": "integer" },
+        "lastDailyClaim": { "type": "string", "format": "date-time" },
+        "tasksCompleted": { "type": "array", "items": { "type": "string" } },
+        "referralsCount": { "type": "integer" },
+        "total_invites": { "type": "integer" },
+        "referralEarnings": { "type": "number" },
+        "invitedBy": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["username", "telegramId", "adsWatched", "balance", "updatedAt"]
+    },
+    "Withdrawal": {
+      "title": "Withdrawal",
+      "description": "Withdrawal request tracking",
+      "type": "object",
+      "properties": {
+        "amount": { "type": "number" },
+        "method": { "type": "string" },
+        "address": { "type": "string" },
+        "uid": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["amount", "method", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profile"
+    },
+    "users/{userId}/referrals/{referredUserId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "joinedAt": { "type": "string", "format": "date-time" },
+          "telegramId": { "type": "integer" },
+          "username": { "type": "string" }
+        },
+        "required": ["joinedAt", "telegramId"]
+      },
+      "description": "List of users referred by this user"
+    },
+    "users/{userId}/withdrawals/{withdrawalId}": {
+      "schema": "Withdrawal",
+      "description": "History of withdrawals for this user"
+    }
+  }
+}

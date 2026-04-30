@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AdWatch Rewards</title>
+    <script>
+      (function() {
+        var mockStorage = {
+          setItem: function(k, v, cb) { if(cb) cb(null, true); return this; },
+          getItem: function(k, cb) { if(cb) cb(null, null); return this; },
+          getItems: function(ks, cb) { if(cb) cb(null, {}); return this; },
+          removeItem: function(k, cb) { if(cb) cb(null, true); return this; },
+          removeItems: function(ks, cb) { if(cb) cb(null, true); return this; },
+          getKeys: function(cb) { if(cb) cb(null, []); return this; }
+        };
+
+        function patch(wa) {
+          try {
+            if (!wa) return;
+            // Force version to a high value
+            const highVersion = '10.0';
+            
+            // Redefine properties even if they are already set
+            Object.defineProperty(wa, 'version', {
+              get: function() { return highVersion; },
+              set: function() {},
+              configurable: true,
+              enumerable: true
+            });
+
+            wa.isVersionAtLeast = function() { return true; };
+            wa._isVersionAtLeast = function() { return true; };
+            
+            Object.defineProperty(wa, 'CloudStorage', {
+              get: function() { return mockStorage; },
+              set: function() {},
+              configurable: true,
+              enumerable: true
+            });
+
+            if (wa.initDataUnsafe) {
+              wa.initDataUnsafe.version = highVersion;
+            }
+          } catch(e) {}
+        }
+
+        // Silence the specific error message if it's still being logged
+        var _warn = console.warn;
+        console.warn = function() {
+          if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('CloudStorage is not supported')) {
+            return;
+          }
+          _warn.apply(console, arguments);
+        };
+
+        // Intercept Telegram object creation and properties
+        var _tg = window.Telegram;
+        function setupTG(v) {
+          if (!v) return;
+          _tg = v;
+          if (_tg.WebApp) patch(_tg.WebApp);
+          else {
+            var _wa;
+            Object.defineProperty(_tg, 'WebApp', {
+              get: function() { return _wa; },
+              set: function(w) {
+                _wa = w;
+                if (w) patch(w);
+              },
+              configurable: true,
+              enumerable: true
+            });
+          }
+        }
+
+        Object.defineProperty(window, 'Telegram', {
+          get: function() { return _tg; },
+          set: function(v) { setupTG(v); },
+          configurable: true,
+          enumerable: true
+        });
+
+        if (window.Telegram) setupTG(window.Telegram);
+
+        // Polling as ultimate safety
+        var interval = setInterval(function() {
+          if (window.Telegram && window.Telegram.WebApp) {
+            patch(window.Telegram.WebApp);
+          }
+        }, 5);
+        setTimeout(function() { clearInterval(interval); }, 15000);
+      })();
+    </script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src='//libtl.com/sdk.js' data-zone='10937696' data-sdk='show_10937696'></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
