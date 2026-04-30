@@ -63,6 +63,22 @@ interface WithdrawalHistory {
   createdAt: any;
 }
 
+// --- Utilities ---
+const retryOperation = async <T,>(operation: () => Promise<T>, maxRetries = 3): Promise<T> => {
+  let lastError: any;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastError = err;
+      if (i < maxRetries - 1) {
+        await new Promise(res => setTimeout(res, 1000 * (i + 1)));
+      }
+    }
+  }
+  throw lastError;
+};
+
 const DAILY_REWARDS = [5, 10, 15, 20, 25, 30, 50]; // Points
 
 // --- Error Handling ---
@@ -221,35 +237,37 @@ export default function App() {
                     const inviterDoc = querySnapshot.docs[0];
                     inviterIdStr = inviterDoc.id;
                     
-                    // INSTANT REWARD LOGIC
-                    const batch = writeBatch(db);
-                    
-                    // 1. Reward Inviter
-                    batch.update(doc(db, "users", inviterIdStr), {
-                      balance: increment(50),
-                      referralsCount: increment(1),
-                      total_invites: increment(1),
-                      referralEarnings: increment(50),
-                      updatedAt: serverTimestamp()
-                    });
+                    // INSTANT REWARD LOGIC WITH RETRY
+                    await retryOperation(async () => {
+                      const batch = writeBatch(db);
+                      
+                      // 1. Reward Inviter
+                      batch.update(doc(db, "users", inviterIdStr), {
+                        balance: increment(50),
+                        referralsCount: increment(1),
+                        total_invites: increment(1),
+                        referralEarnings: increment(50),
+                        updatedAt: serverTimestamp()
+                      });
 
-                    // 2. Track in inviter's sub-collection
-                    batch.set(doc(db, `users/${inviterIdStr}/referrals/${user.id}`), {
-                      telegramId: user.id,
-                      username: identity.username,
-                      joinedAt: serverTimestamp()
-                    });
+                      // 2. Track in inviter's sub-collection
+                      batch.set(doc(db, `users/${inviterIdStr}/referrals/${user.id}`), {
+                        telegramId: user.id,
+                        username: identity.username,
+                        joinedAt: serverTimestamp()
+                      });
 
-                    // 3. Notify Inviter (Green success notification)
-                    const notifRef = doc(collection(db, `users/${inviterIdStr}/notifications`));
-                    batch.set(notifRef, {
-                      message: `Your friend just joined Task Tuner! +50 points added to your wallet.`,
-                      type: 'success',
-                      createdAt: serverTimestamp(),
-                      read: false
-                    });
+                      // 3. Notify Inviter (Yellow success notification)
+                      const notifRef = doc(collection(db, `users/${inviterIdStr}/notifications`));
+                      batch.set(notifRef, {
+                        message: `Your friend just joined Task Tuner! +50 points added to your wallet.`,
+                        type: 'success',
+                        createdAt: serverTimestamp(),
+                        read: false
+                      });
 
-                    await batch.commit();
+                      await batch.commit();
+                    });
                     
                     if (tg) {
                       tg.showAlert(`Welcome to Task Tuner!! 🚀`);
@@ -257,7 +275,17 @@ export default function App() {
                     }
                   }
                 } catch (refErr) {
-                  console.error("Instant Referral Error:", refErr);
+                  console.error("Instant Referral Error (after retries):", refErr);
+                  // Log as "fail-safe" as requested
+                  try {
+                    await addDoc(collection(db, "system_logs"), {
+                      type: 'referral_fail',
+                      userId: user.id,
+                      inviterId: inviterIdFromParam,
+                      error: refErr instanceof Error ? refErr.message : String(refErr),
+                      createdAt: serverTimestamp()
+                    });
+                  } catch {}
                 }
               } else if (tg) {
                 tg.showAlert(`Welcome to Task Tuner!! 🚀`);
@@ -632,7 +660,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0D121F] p-10 text-center">
-        <Loader2 className="w-12 h-12 animate-spin text-[#A855F7] mb-6" />
+        <Loader2 className="w-12 h-12 animate-spin text-[#FACC15] mb-6" />
         <h2 className="text-xl font-black text-white mb-2">Loading @Tasktuner...</h2>
         <p className="text-sm text-[#A0AEC0]">Securing connection to rewards gateway</p>
       </div>
@@ -642,8 +670,8 @@ export default function App() {
   if (error === "AUTH_RESTRICTED") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0D0D0D] p-8 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#7C3AED]/10 flex items-center justify-center mb-6">
-          <Zap className="w-10 h-10 text-[#7C3AED]" />
+        <div className="w-20 h-20 rounded-full bg-[#EAB308]/10 flex items-center justify-center mb-6">
+          <Zap className="w-10 h-10 text-[#EAB308]" />
         </div>
         <h2 className="text-2xl font-black text-white mb-4">Auth Disabled</h2>
         <div className="text-[#A0AEC0] text-sm mb-10 leading-relaxed text-left space-y-4">
@@ -668,11 +696,11 @@ export default function App() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#0D121F] p-8 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#A855F7]/10 flex items-center justify-center mb-6">
-          <Bell className="w-10 h-10 text-[#A855F7]" />
+        <div className="w-20 h-20 rounded-full bg-[#FACC15]/10 flex items-center justify-center mb-6">
+          <Bell className="w-10 h-10 text-[#FACC15]" />
         </div>
         <h2 className="text-2xl font-black text-white mb-4">Connection Failed</h2>
-        <p className="text-[#A855F7] text-sm mb-10 leading-relaxed bg-[#A855F7]/5 p-4 rounded-xl border border-[#A855F7]/10">
+        <p className="text-[#FACC15] text-sm mb-10 leading-relaxed bg-[#FACC15]/5 p-4 rounded-xl border border-[#FACC15]/10">
           {error}
         </p>
         <button 
@@ -686,7 +714,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen pb-28 bg-[#0D121F] font-sans selection:bg-[#A855F7]/30 overflow-x-hidden">
+    <div className="min-h-screen pb-28 bg-[#0D121F] font-sans selection:bg-[#FACC15]/30 overflow-x-hidden">
       {/* Header Section */}
       <header className="px-6 pt-6 pb-4 flex items-center justify-between">
         <div>
@@ -697,7 +725,7 @@ export default function App() {
             {activeTab === 'home' ? "Let's earn some points today!" : activeTab === 'tasks' ? "Complete tasks to earn more" : activeTab === 'wallet' ? "Cash out your earnings" : "Refer friends to get paid"}
           </p>
         </div>
-        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#A855F7] to-[#8B5CF6] flex items-center justify-center border border-white/10 shadow-lg shadow-[#A855F7]/10 p-0.5">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#FACC15] to-[#F59E0B] flex items-center justify-center border border-white/10 shadow-lg shadow-[#FACC15]/10 p-0.5">
           <div className="w-full h-full rounded-full bg-[#0D121F] flex items-center justify-center">
              <UserIcon className="w-5 h-5 text-white" />
           </div>
@@ -711,7 +739,7 @@ export default function App() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="gradient-card rounded-[24px] p-6 text-white shadow-xl shadow-[#A855F7]/10"
+              className="gradient-card rounded-[24px] p-6 text-white shadow-xl shadow-[#FACC15]/10"
             >
               <div className="relative z-10">
                 <p className="text-sm font-medium opacity-80 uppercase tracking-widest">Current Balance</p>
@@ -741,7 +769,7 @@ export default function App() {
               whileTap={{ scale: 0.98 }}
               onClick={handleWatchAd}
               disabled={isWatching}
-              className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#A855F7] to-[#7C3AED] flex items-center justify-center gap-3 text-white font-bold shadow-lg shadow-[#A855F7]/20 disabled:opacity-70 disabled:cursor-not-allowed group transition-all"
+              className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#FACC15] to-[#EAB308] flex items-center justify-center gap-3 text-white font-bold shadow-lg shadow-[#FACC15]/20 disabled:opacity-70 disabled:cursor-not-allowed group transition-all"
             >
               {isWatching ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -753,14 +781,14 @@ export default function App() {
 
             {/* Daily Rewards Sneak Peek */}
             <section className="stats-card rounded-2xl p-4 flex items-center gap-4 cursor-pointer" onClick={() => setActiveTab('tasks')}>
-              <div className="w-12 h-12 rounded-xl bg-[#A855F7]/10 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-[#A855F7]" />
+              <div className="w-12 h-12 rounded-xl bg-[#FACC15]/10 flex items-center justify-center">
+                <Zap className="w-6 h-6 text-[#FACC15]" />
               </div>
               <div className="flex-1">
                 <h4 className="font-bold text-sm">Daily Reward</h4>
                 <p className="text-xs text-[#A0AEC0]">Current Streak: {profile?.dailyStreak || 0} Days</p>
               </div>
-              <div className="px-3 py-1 rounded-full bg-[#A855F7]/10 text-[#A855F7] text-[10px] font-bold border border-[#A855F7]/20 uppercase">
+              <div className="px-3 py-1 rounded-full bg-[#FACC15]/10 text-[#FACC15] text-[10px] font-bold border border-[#FACC15]/20 uppercase">
                  View Tasks
               </div>
             </section>
@@ -771,14 +799,14 @@ export default function App() {
             <section className="stats-card rounded-3xl p-6 bg-gradient-to-b from-white/[0.05] to-transparent">
                <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="font-bold text-base">Daily Check-in</h3>
+                     <h3 className="font-bold text-base">Daily Check-in</h3>
                     <p className="text-xs text-[#A0AEC0]">Claim your daily reward</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-bold text-[#A855F7]">{profile?.dailyStreak}/7 Days</p>
+                    <p className="text-xs font-bold text-[#FACC15]">{profile?.dailyStreak}/7 Days</p>
                     <div className="w-20 h-1.5 bg-white/10 rounded-full mt-1 overflow-hidden">
                        <div 
-                        className="h-full bg-[#A855F7]" 
+                        className="h-full bg-[#FACC15]" 
                         style={{ width: `${((profile?.dailyStreak || 0) / 7) * 100}%` }}
                        />
                     </div>
@@ -794,13 +822,13 @@ export default function App() {
                    return (
                      <div key={day} className="flex flex-col items-center gap-2">
                         <div className={`w-full aspect-square rounded-xl flex items-center justify-center text-[10px] font-bold border transition-all
-                          ${isCompleted ? 'bg-[#A855F7] border-[#A855F7] text-white' : 
-                            isCurrent ? 'bg-white/5 border-[#A855F7] text-[#A855F7] shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 
+                          ${isCompleted ? 'bg-[#FACC15] border-[#FACC15] text-white' : 
+                            isCurrent ? 'bg-white/5 border-[#FACC15] text-[#FACC15] shadow-[0_0_10px_rgba(250,204,21,0.2)]' : 
                             'bg-white/5 border-white/10 text-[#A0AEC0]'}`}
                         >
                           {isCompleted ? <Check className="w-4 h-4" /> : `Day ${day}`}
                         </div>
-                        <span className={`text-[8px] font-bold ${isCurrent ? 'text-[#A855F7]' : 'text-[#A0AEC0]'}`}>
+                        <span className={`text-[8px] font-bold ${isCurrent ? 'text-[#FACC15]' : 'text-[#A0AEC0]'}`}>
                           {DAILY_REWARDS[i]} pts
                         </span>
                      </div>
@@ -808,11 +836,11 @@ export default function App() {
                  })}
                </div>
 
-               <motion.button
+               <motion.button 
                 whileTap={{ scale: 0.98 }}
                 onClick={handleDailyCheckIn}
                 disabled={isClaimingDaily}
-                className="w-full py-3 rounded-xl bg-[#A855F7] text-white text-sm font-bold shadow-lg shadow-[#A855F7]/20 disabled:opacity-50"
+                className="w-full py-3 rounded-xl bg-[#FACC15] text-[#0D0D0D] text-sm font-bold shadow-lg shadow-[#FACC15]/20 disabled:opacity-50"
                >
                  {isClaimingDaily ? 'Claiming...' : 'Claim Today\'s Reward'}
                </motion.button>
@@ -843,7 +871,7 @@ export default function App() {
                         href="https://t.me/ebisa_emoji" 
                         target="_blank" 
                         rel="noreferrer"
-                        className="px-4 py-1.5 rounded-lg bg-[#A855F7]/20 text-[#A855F7] text-[10px] font-bold border border-[#A855F7]/20 text-center flex items-center gap-1"
+                        className="px-4 py-1.5 rounded-lg bg-[#FACC15]/20 text-[#FACC15] text-[10px] font-bold border border-[#FACC15]/20 text-center flex items-center gap-1"
                       >
                          Join <ExternalLink size={10} />
                       </a>
@@ -883,7 +911,7 @@ export default function App() {
                         href="https://t.me/yeman1th" 
                         target="_blank" 
                         rel="noreferrer"
-                        className="px-4 py-1.5 rounded-lg bg-[#A855F7]/20 text-[#A855F7] text-[10px] font-bold border border-[#A855F7]/20 text-center flex items-center gap-1"
+                        className="px-4 py-1.5 rounded-lg bg-[#FACC15]/20 text-[#FACC15] text-[10px] font-bold border border-[#FACC15]/20 text-center flex items-center gap-1"
                       >
                          Join <ExternalLink size={10} />
                       </a>
@@ -919,7 +947,7 @@ export default function App() {
                     <p className="text-[10px] opacity-40 uppercase font-medium">For next withdrawal</p>
                   </div>
                 </div>
-                <span className={`text-xs font-black ${((profile?.total_invites || 0) - (profile?.consumedInvites || 0)) >= 2 ? 'text-green-400' : 'text-[#A855F7]'}`}>
+                <span className={`text-xs font-black ${((profile?.total_invites || 0) - (profile?.consumedInvites || 0)) >= 2 ? 'text-green-400' : 'text-[#FACC15]'}`}>
                   {Math.max(0, (profile?.total_invites || 0) - (profile?.consumedInvites || 0))}/2
                 </span>
               </div>
@@ -934,7 +962,7 @@ export default function App() {
                     <p className="text-[9px] opacity-40 uppercase font-medium">{profile?.has_withdrawn ? 'Needed for next: 10' : 'Required: 25'}</p>
                   </div>
                 </div>
-                <span className={`text-xs font-black ${(profile?.adsSinceLastWithdrawal || 0) >= (profile?.has_withdrawn ? 10 : 25) ? 'text-green-400' : 'text-[#7C3AED]'}`}>
+                <span className={`text-xs font-black ${(profile?.adsSinceLastWithdrawal || 0) >= (profile?.has_withdrawn ? 10 : 25) ? 'text-green-400' : 'text-[#EAB308]'}`}>
                   {profile?.adsSinceLastWithdrawal || 0}/{profile?.has_withdrawn ? 10 : 25}
                 </span>
               </div>
@@ -958,21 +986,21 @@ export default function App() {
                 {withdrawalMethod && (
                   <div className="flex items-center gap-2">
                     <span className="text-[8px] font-bold text-white/40 uppercase">Selected:</span>
-                    <span className="text-[8px] font-black text-[#A855F7] uppercase">{withdrawalMethod.replace('_', ' ')}</span>
+                    <span className="text-[8px] font-black text-[#FACC15] uppercase">{withdrawalMethod.replace('_', ' ')}</span>
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-3">
                 {[
-                  { id: 'usdt_trc20', label: 'USDT (TRC20)', img: 'https://cryptologos.cc/logos/tether-usdt-logo.png' },
-                  { id: 'usdt_bep20', label: 'USDT (BEP20)', img: 'https://cryptologos.cc/logos/tether-usdt-logo.png' },
-                  { id: 'ton', label: 'TON', img: 'https://cryptologos.cc/logos/toncoin-ton-logo.png' },
-                  { id: 'binance', label: 'Binance', img: 'https://upload.wikimedia.org/wikipedia/commons/e/e8/Binance_Logo.svg' },
+                  { id: 'usdt_trc20', label: 'USDT\nTRC20', img: 'https://cdn.pixabay.com/photo/2021/04/30/16/47/tether-6219434_1280.png' },
+                  { id: 'not_coin', label: 'NOT\nCOIN', img: 'https://cryptologos.cc/logos/notcoin-not-logo.png' },
+                  { id: 'ton_coin', label: 'TON\nCOIN', img: 'https://cryptologos.cc/logos/toncoin-ton-logo.png' },
+                  { id: 'binance', label: 'BINANCE\nUID', img: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png' }
                 ].map((m) => (
                   <button 
                     key={m.id}
                     onClick={() => setWithdrawalMethod(m.id)}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${withdrawalMethod === m.id ? 'bg-[#A855F7]/10 border-[#A855F7] shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'bg-white/5 border-white/5'}`}
+                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${withdrawalMethod === m.id ? 'bg-[#FACC15]/10 border-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'bg-white/5 border-white/5'}`}
                   >
                     <img src={m.img} alt={m.label} className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
                     <span className="text-[8px] font-black uppercase text-center leading-tight whitespace-pre-wrap">{m.label}</span>
@@ -991,7 +1019,7 @@ export default function App() {
                     value={withdrawalAmount}
                     onChange={(e) => setWithdrawalAmount(e.target.value)}
                     placeholder="E.g. 100"
-                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-5 text-sm text-white focus:outline-none focus:border-[#A855F7]/50 transition-all"
+                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-5 text-sm text-white focus:outline-none focus:border-[#FACC15]/50 transition-all"
                   />
                   <div className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#A0AEC0]">PTS</div>
                 </div>
@@ -1005,7 +1033,7 @@ export default function App() {
                     value={withdrawalAddress}
                     onChange={(e) => setWithdrawalAddress(e.target.value)}
                     placeholder="Enter your wallet address"
-                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-5 text-sm text-white focus:outline-none focus:border-[#A855F7]/50 transition-all font-mono"
+                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-5 text-sm text-white focus:outline-none focus:border-[#FACC15]/50 transition-all font-mono"
                   />
                 </div>
               ) : (
@@ -1016,7 +1044,7 @@ export default function App() {
                     value={withdrawalUid}
                     onChange={(e) => setWithdrawalUid(e.target.value)}
                     placeholder="Enter your Exchange UID"
-                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-5 text-sm text-white focus:outline-none focus:border-[#A855F7]/50 transition-all font-mono"
+                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-5 text-sm text-white focus:outline-none focus:border-[#FACC15]/50 transition-all font-mono"
                   />
                 </div>
               )}
@@ -1028,7 +1056,7 @@ export default function App() {
               disabled={isWithdrawing || !profile || profile.balance < 30}
               className={`w-full h-16 rounded-2xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-3
                 ${(((profile?.total_invites || 0) - (profile?.consumedInvites || 0)) >= 2 && (profile?.adsSinceLastWithdrawal || 0) >= (profile?.has_withdrawn ? 10 : 25)) 
-                  ? 'bg-gradient-to-r from-[#7C3AED] to-[#581C87] shadow-[#7C3AED]/20' 
+                  ? 'bg-gradient-to-r from-[#EAB308] to-[#CA8A04] shadow-[#EAB308]/20' 
                   : 'bg-white/10 border border-white/5 text-white/20'}`}
             >
               {isWithdrawing ? (
@@ -1053,7 +1081,7 @@ export default function App() {
             {/* History Section */}
             <div className="mt-12 space-y-4">
                <div className="flex items-center gap-2 px-2">
-                 <Clock size={16} className="text-[#A855F7]" />
+                 <Clock size={16} className="text-[#FACC15]" />
                  <h3 className="text-lg font-black text-white uppercase tracking-tight">Withdrawal History</h3>
                </div>
 
@@ -1108,12 +1136,12 @@ export default function App() {
             <div className="bg-white/5 rounded-[32px] p-8 border border-white/10 relative overflow-hidden">
               <div className="relative z-10">
                 <div className="flex items-center gap-6 mb-10">
-                  <div className="w-20 h-20 rounded-[24px] bg-gradient-to-tr from-[#7C3AED] to-[#581C87] flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-[#7C3AED]/20">
+                  <div className="w-20 h-20 rounded-[24px] bg-gradient-to-tr from-[#EAB308] to-[#CA8A04] flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-[#EAB308]/20">
                     {userData?.username?.[0]?.toUpperCase() || 'U'}
                   </div>
                   <div>
                     <h3 className="text-2xl font-black text-white">{userData?.username || 'User'}</h3>
-                    <p className="text-xs text-[#7C3AED] font-bold mt-1 tracking-wider uppercase">Active Member</p>
+                    <p className="text-xs text-[#EAB308] font-bold mt-1 tracking-wider uppercase">Active Member</p>
                   </div>
                 </div>
                 
@@ -1132,7 +1160,7 @@ export default function App() {
                   </div>
                   <div className="bg-black/30 p-4 rounded-2xl border border-white/5">
                     <p className="text-[10px] font-black opacity-40 uppercase tracking-widest text-[#A0AEC0]">Current Ads</p>
-                    <p className="text-xl font-black text-[#7C3AED] mt-1">{profile?.adsSinceLastWithdrawal || 0}</p>
+                    <p className="text-xl font-black text-[#EAB308] mt-1">{profile?.adsSinceLastWithdrawal || 0}</p>
                   </div>
                 </div>
 
@@ -1144,13 +1172,13 @@ export default function App() {
                 </div>
               </div>
               
-              <div className="absolute -right-20 -top-20 w-48 h-48 bg-[#7C3AED]/10 rounded-full blur-3xl" />
+              <div className="absolute -right-20 -top-20 w-48 h-48 bg-[#EAB308]/10 rounded-full blur-3xl" />
             </div>
 
             {/* FAQ Section */}
             <div className="stats-card rounded-[32px] p-6 space-y-4">
               <h4 className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-                <Bell size={18} className="text-[#7C3AED]" />
+                <Bell size={18} className="text-[#EAB308]" />
                 Frequently Asked Questions
               </h4>
               
@@ -1193,7 +1221,7 @@ export default function App() {
                 rel="noreferrer"
                 className="w-full h-14 mt-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold flex items-center justify-center gap-3 hover:bg-white/10 transition-all"
               >
-                <ExternalLink size={18} className="text-[#7C3AED]" />
+                <ExternalLink size={18} className="text-[#EAB308]" />
                 NEED HELP? READ FAQ & CONTACT
               </motion.a>
             </div>
@@ -1229,13 +1257,13 @@ export default function App() {
                     </div>
                     <div className="bg-black/30 backdrop-blur-md rounded-2xl p-5 border border-white/5 shadow-inner">
                       <p className="text-[10px] uppercase font-black opacity-40 tracking-[0.2em]">Earnings</p>
-                      <p className="text-3xl font-black mt-2 text-[#A855F7] leading-none">{Math.floor(profile?.referralEarnings || 0)} pts</p>
+                      <p className="text-3xl font-black mt-2 text-[#FACC15] leading-none">{Math.floor(profile?.referralEarnings || 0)} pts</p>
                     </div>
                   </div>
                </div>
 
                {/* Modern Decorative Blurs */}
-               <div className="absolute -right-16 -top-16 w-48 h-48 bg-[#A855F7]/30 rounded-full blur-[60px]" />
+               <div className="absolute -right-16 -top-16 w-48 h-48 bg-[#FACC15]/30 rounded-full blur-[60px]" />
                <div className="absolute -left-16 -bottom-16 w-48 h-48 bg-[#10B981]/30 rounded-full blur-[60px]" />
             </motion.div>
 
@@ -1245,17 +1273,17 @@ export default function App() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <label className="text-[10px] font-black text-[#A0AEC0] uppercase tracking-[0.15em]">Your Unique Link</label>
-                  <span className="text-[10px] text-[#A855F7] font-bold">Earn 50 points per friend!</span>
+                  <span className="text-[10px] text-[#FACC15] font-bold">Earn 50 points per friend!</span>
                 </div>
                 <div className="relative group">
                   <input 
                     readOnly 
                     value={referralLink}
-                    className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl px-6 text-xs text-white pr-16 focus:outline-none focus:border-[#A855F7]/50 transition-all font-mono"
+                    className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl px-6 text-xs text-white pr-16 focus:outline-none focus:border-[#FACC15]/50 transition-all font-mono"
                   />
                   <button 
                     onClick={handleCopyLink}
-                    className="absolute right-2.5 top-2.5 bottom-2.5 w-11 bg-[#A855F7] rounded-xl flex items-center justify-center text-white active:scale-95 transition-all shadow-lg shadow-[#A855F7]/20 hover:bg-[#7C3AED]"
+                    className="absolute right-2.5 top-2.5 bottom-2.5 w-11 bg-[#FACC15] rounded-xl flex items-center justify-center text-[#0D0D0D] active:scale-95 transition-all shadow-lg shadow-[#FACC15]/20 hover:bg-[#EAB308]"
                   >
                     <Copy size={18} />
                   </button>
@@ -1277,8 +1305,8 @@ export default function App() {
               {/* Trust/Tutorial Cards */}
               <div className="grid grid-cols-1 gap-4 text-left">
                 <div className="stats-card rounded-[24px] p-6 border border-white/5 flex gap-4 items-start">
-                   <div className="w-10 h-10 rounded-full bg-[#A855F7]/10 flex items-center justify-center shrink-0">
-                     <CheckCircle2 size={20} className="text-[#A855F7]" />
+                   <div className="w-10 h-10 rounded-full bg-[#FACC15]/10 flex items-center justify-center shrink-0">
+                     <CheckCircle2 size={20} className="text-[#FACC15]" />
                    </div>
                    <div>
                      <h5 className="font-bold text-sm mb-1 text-white">Verified Tracking</h5>
@@ -1301,8 +1329,8 @@ export default function App() {
           exit={{ opacity: 0, scale: 0.9 }}
           className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] p-6 rounded-3xl shadow-2xl border flex flex-col items-center text-center max-w-[80%] min-w-[280px]
             ${showToast.type === 'success' ? 'bg-[#10B981] border-[#34D399] text-white' : 
-              showToast.type === 'error' ? 'bg-[#7C3AED] border-[#9333EA] text-white' : 
-              'bg-[#A855F7] border-[#A78BFA] text-white'}`}
+              showToast.type === 'error' ? 'bg-[#EAB308] border-[#FACC15] text-white' : 
+              'bg-[#FACC15] border-[#FEF08A] text-[#0D0D0D]'}`}
         >
           <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-4">
             {showToast.type === 'success' ? <Check size={32} /> : showToast.type === 'error' ? <Zap size={32} /> : <Bell size={32} />}
@@ -1338,9 +1366,9 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, labe
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 transition-all group relative ${active ? 'text-[#7C3AED]' : 'text-[#A0AEC0]'}`}
+      className={`flex flex-col items-center gap-1 transition-all group relative ${active ? 'text-[#EAB308]' : 'text-[#A0AEC0]'}`}
     >
-      <div className={`p-2 rounded-xl transition-all ${active ? 'bg-[#7C3AED]/10 scale-110 shadow-lg shadow-[#7C3AED]/10' : 'group-hover:bg-white/5'}`}>
+      <div className={`p-2 rounded-xl transition-all ${active ? 'bg-[#EAB308]/10 scale-110 shadow-lg shadow-[#EAB308]/10' : 'group-hover:bg-white/5'}`}>
         {React.cloneElement(icon as React.ReactElement, { size: 24, strokeWidth: active ? 2.5 : 2 })}
       </div>
       <span className={`text-[10px] font-bold uppercase tracking-widest ${active ? 'opacity-100' : 'opacity-40'}`}>
@@ -1349,7 +1377,7 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, labe
       {active && (
         <motion.div 
           layoutId="nav-pill"
-          className="w-1.5 h-1.5 rounded-full bg-[#7C3AED] absolute -bottom-1"
+          className="w-1.5 h-1.5 rounded-full bg-[#EAB308] absolute -bottom-1"
         />
       )}
     </button>

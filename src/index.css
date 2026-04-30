@@ -3,16 +3,16 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --color-primary: #A855F7;
-  --color-secondary: #7C3AED;
+  --color-primary: #FACC15;
+  --color-secondary: #EAB308;
 }
 
 :root {
   color-scheme: dark;
   --midnight: #0D0D0D;
   --slate-gray: #A0AEC0;
-  --brand-blue: #A855F7;
-  --brand-purple: #6D28D9;
+  --brand-blue: #FACC15;
+  --brand-purple: #CA8A04;
 }
 
 body {
