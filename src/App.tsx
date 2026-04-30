@@ -154,9 +154,6 @@ export default function App() {
           if (authStatus.restricted) {
             setError("AUTH_RESTRICTED");
             setLoading(false);
-          } else if (authStatus.error === "API_KEY_INVALID") {
-            setError("API_KEY_INVALID");
-            setLoading(false);
           }
           return;
         }
@@ -515,7 +512,7 @@ export default function App() {
       setWithdrawalSuccess(true);
       
       try {
-        (window as any).Telegram?.WebApp?.showAlert('\ud83c\udf89 Withdrawal Request Submitted!');
+        (window as any).Telegram?.WebApp?.showAlert('🎉 Withdrawal Request Submitted!');
         (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
       } catch {}
       
@@ -537,7 +534,7 @@ export default function App() {
           await successBatch.commit();
           
           try {
-             (window as any).Telegram?.WebApp?.showAlert('\u2705 Withdrawal Processed Successfully!');
+             (window as any).Telegram?.WebApp?.showAlert('✅ Withdrawal Processed Successfully!');
              (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
           } catch {}
         } catch (err) {
@@ -551,7 +548,7 @@ export default function App() {
       console.error("Withdrawal Error:", err);
       handleFirestoreError(err, OperationType.WRITE, userDocRef.path);
       try {
-        (window as any).Telegram?.WebApp?.showAlert('\u274c Withdrawal failed. Please try again.');
+        (window as any).Telegram?.WebApp?.showAlert('❌ Withdrawal failed. Please try again.');
         (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
       } catch {}
     } finally {
@@ -565,30 +562,6 @@ export default function App() {
         <Loader2 className="w-12 h-12 animate-spin text-[#06B6D4] mb-6" />
         <h2 className="text-xl font-black text-white mb-2">Loading @Madbot...</h2>
         <p className="text-sm text-[#A0AEC0]">Securing connection to rewards gateway</p>
-      </div>
-    );
-  }
-
-  if (error === "API_KEY_INVALID") {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0D0D0D] p-8 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#EF4444]/10 flex items-center justify-center mb-6">
-          <Zap className="w-10 h-10 text-[#EF4444]" />
-        </div>
-        <h2 className="text-2xl font-black text-white mb-4">Invalid Configuration</h2>
-        <div className="text-[#A0AEC0] text-sm mb-10 leading-relaxed text-left space-y-4">
-          <p>The Firebase API Key provided is invalid or restricted.</p>
-          <div className="bg-white/5 p-4 rounded-xl border border-white/10 font-mono text-[10px] text-white/60">
-            Error: auth/api-key-not-valid
-          </div>
-          <p>Please ensure you have run the Firebase Setup tool in AI Studio properly, or update the `firebase-applet-config.json` with a valid API key from your Firebase Console.</p>
-        </div>
-        <button 
-          onClick={() => window.location.reload()}
-          className="w-full h-16 rounded-2xl bg-white text-black font-black shadow-xl"
-        >
-          RETRY
-        </button>
       </div>
     );
   }
@@ -861,7 +834,7 @@ export default function App() {
                  animate={{ opacity: 1, y: 0 }}
                  className="p-4 bg-green-500/20 border border-green-500/30 rounded-2xl text-center"
                >
-                 <p className="text-green-400 text-xs font-black uppercase tracking-widest">\ud83c\udf89 Withdrawal Request Submitted!</p>
+                 <p className="text-green-400 text-xs font-black uppercase tracking-widest">🎉 Withdrawal Request Submitted!</p>
                </motion.div>
             )}
 
@@ -1005,7 +978,7 @@ export default function App() {
                                  'bg-red-500/10 text-red-500'}`}
                              >
                                 <span className="w-1 h-1 rounded-full bg-current shadow-[0_0_5px_currentColor]" />
-                                {item.status === 'Success' ? 'Success \u2705' : item.status}
+                                {item.status === 'Success' ? 'Success ✅' : item.status}
                              </div>
                           </div>
                        </div>
