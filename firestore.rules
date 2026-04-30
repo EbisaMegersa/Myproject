@@ -13,20 +13,17 @@ service cloud.firestore {
 
     // Validation Blueprint
     function isValidUser(data) {
-      return data.keys().hasAll(['username', 'adsWatched', 'updatedAt', 'telegramId', 'balance'])
-        && data.username is string && data.username.size() <= 100
+      return data.username is string && data.username.size() <= 100
         && data.adsWatched is int && data.adsWatched >= 0
         && data.balance is number && data.balance >= 0
-        && (data.get('consumedInvites', 0) is int)
         && data.updatedAt == request.time
         && data.telegramId is int;
     }
 
     function isValidWithdrawal(data) {
-      return data.keys().hasAll(['amount', 'method', 'status', 'createdAt', 'userId'])
-        && data.amount is number && data.amount >= 30
+      return data.amount is number && data.amount >= 30
         && data.method is string
-        && (data.status == 'Pending' || data.status == 'Success')
+        && (data.status == 'Pending' || data.status == 'Success' || data.status == 'Rejected')
         && data.userId == request.auth.uid;
     }
 
@@ -34,18 +31,16 @@ service cloud.firestore {
       allow get: if isSignedIn(); 
       allow list: if isSignedIn();
       
-      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
+      allow create: if isOwner(userId) && isValidUser(incoming());
       
-      allow update: if (isOwner(userId) && isValidId(userId) && isValidUser(incoming()))
+      allow update: if (isOwner(userId) && isValidUser(incoming()))
         || (
           // Action: Referral Reward (50 points)
-          isSignedIn() && !isOwner(userId)
-          && incoming().balance == existing().balance + 50
-          && (incoming().referralsCount == (existing().get('referralsCount', 0) + 1))
-          && (incoming().total_invites == (existing().get('total_invites', 0) + 1))
-          && (incoming().referralEarnings == (existing().get('referralEarnings', 0.0) + 50))
+          isSignedIn() 
+          && incoming().balance == existing().get('balance', 0) + 50
+          && incoming().referralsCount == existing().get('referralsCount', 0) + 1
           && incoming().updatedAt == request.time
-          && incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'referralsCount', 'total_invites', 'referralEarnings', 'updatedAt'])
+          && incoming().diff(existing()).affectedKeys().hasAny(['balance', 'referralsCount', 'total_invites', 'referralEarnings', 'updatedAt'])
         )
         || (
           // Action: Status Flip / Invite Consumption

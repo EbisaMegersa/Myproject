@@ -40,7 +40,7 @@
       "schema": "User",
       "description": "User profile"
     },
-    "users/{userId}/referrals/{referredUserId}": {
+    "users/{userId}/referrals/{referredTelegramId}": {
       "schema": {
         "type": "object",
         "properties": {
@@ -48,7 +48,7 @@
           "telegramId": { "type": "integer" },
           "username": { "type": "string" }
         },
-        "required": ["joinedAt", "telegramId"]
+        "required": ["joinedAt", "telegramId", "username"]
       },
       "description": "List of users referred by this user"
     },

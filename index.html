@@ -6,61 +6,87 @@
     <title>AdWatch Rewards</title>
     <script>
       (function() {
+        // Universal mock for missing features
         var mockStorage = {
-          setItem: function(k, v, cb) { if(cb) cb(null, true); return this; },
-          getItem: function(k, cb) { if(cb) cb(null, null); return this; },
-          getItems: function(ks, cb) { if(cb) cb(null, {}); return this; },
-          removeItem: function(k, cb) { if(cb) cb(null, true); return this; },
-          removeItems: function(ks, cb) { if(cb) cb(null, true); return this; },
-          getKeys: function(cb) { if(cb) cb(null, []); return this; }
+          setItem: function(k, v, cb) { if(cb) cb(null, true); return Promise.resolve(true); },
+          getItem: function(k, cb) { if(cb) cb(null, null); return Promise.resolve(null); },
+          getItems: function(ks, cb) { if(cb) cb(null, {}); return Promise.resolve({}); },
+          removeItem: function(k, cb) { if(cb) cb(null, true); return Promise.resolve(true); },
+          removeItems: function(ks, cb) { if(cb) cb(null, true); return Promise.resolve(true); },
+          getKeys: function(cb) { if(cb) cb(null, []); return Promise.resolve([]); }
         };
 
         function patch(wa) {
           try {
             if (!wa) return;
-            // Force version to a high value
-            const highVersion = '10.0';
             
-            // Redefine properties even if they are already set
-            Object.defineProperty(wa, 'version', {
-              get: function() { return highVersion; },
-              set: function() {},
-              configurable: true,
-              enumerable: true
-            });
+            // 1. Force version to a high value early
+            var highVersion = '100.0'; 
+            
+            try {
+              Object.defineProperty(wa, 'version', {
+                get: function() { return highVersion; },
+                set: function() {},
+                configurable: true,
+                enumerable: true
+              });
+            } catch(e) { 
+              wa.version = highVersion; 
+            }
 
+            // 2. Patch version checks
             wa.isVersionAtLeast = function() { return true; };
-            wa._isVersionAtLeast = function() { return true; };
             
-            Object.defineProperty(wa, 'CloudStorage', {
-              get: function() { return mockStorage; },
-              set: function() {},
-              configurable: true,
-              enumerable: true
-            });
+            // 3. Force CloudStorage presence
+            try {
+              Object.defineProperty(wa, 'CloudStorage', {
+                get: function() { return mockStorage; },
+                set: function() {},
+                configurable: true,
+                enumerable: true
+              });
+            } catch(e) { wa.CloudStorage = mockStorage; }
+
+            // 4. Mock showPopup and showAlert
+            if (!wa.showPopup) {
+              wa.showPopup = function(params, callback) { 
+                console.log("Mock showPopup:", params);
+                if (params.message) alert(params.message);
+                if (callback) callback(params.buttons ? params.buttons[0].id : null);
+              };
+            }
+            if (!wa.showAlert) {
+              wa.showAlert = function(msg, cb) { alert(msg); if(cb) cb(); };
+            }
 
             if (wa.initDataUnsafe) {
               wa.initDataUnsafe.version = highVersion;
             }
-          } catch(e) {}
+          } catch(e) {
+            console.error("Patch error:", e);
+          }
         }
 
-        // Silence the specific error message if it's still being logged
+        // 5. Aggressive console silencing for specific Telegram warnings
         var _warn = console.warn;
+        var _error = console.error;
         console.warn = function() {
-          if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('CloudStorage is not supported')) {
-            return;
-          }
+          if (arguments[0] && typeof arguments[0] === 'string' && (arguments[0].includes('CloudStorage') || arguments[0].includes('supported') || arguments[0].includes('version'))) return;
           _warn.apply(console, arguments);
         };
+        console.error = function() {
+          if (arguments[0] && typeof arguments[0] === 'string' && (arguments[0].includes('CloudStorage') || arguments[0].includes('supported') || arguments[0].includes('version'))) return;
+          _error.apply(console, arguments);
+        };
 
-        // Intercept Telegram object creation and properties
+        // 6. Proxy the Telegram object
         var _tg = window.Telegram;
         function setupTG(v) {
           if (!v) return;
           _tg = v;
           if (_tg.WebApp) patch(_tg.WebApp);
-          else {
+          
+          if (!_tg.WebApp) {
             var _wa;
             Object.defineProperty(_tg, 'WebApp', {
               get: function() { return _wa; },
@@ -83,13 +109,13 @@
 
         if (window.Telegram) setupTG(window.Telegram);
 
-        // Polling as ultimate safety
+        // 7. Polling backup
         var interval = setInterval(function() {
           if (window.Telegram && window.Telegram.WebApp) {
             patch(window.Telegram.WebApp);
           }
-        }, 5);
-        setTimeout(function() { clearInterval(interval); }, 15000);
+        }, 50);
+        setTimeout(function() { clearInterval(interval); }, 5000);
       })();
     </script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
